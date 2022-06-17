@@ -87,6 +87,9 @@ router.get("/todos/:id", async (req, res, next) => {
           createdDate: {
             $first: "$createdDate",
           },
+          parentTodo: {
+            $first: "$parentTodo",
+          },
           subTasks: {
             $push: "$subTasks",
           },

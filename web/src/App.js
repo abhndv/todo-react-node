@@ -37,6 +37,7 @@ function App() {
     getTodoById(id)
       .then((res) => {
         setLoading(false);
+        console.log(res);
         setParent(res[0]);
         if (res[0]?.subTasks?.length && res[0].subTasks[0]["_id"]) {
           setTodos(res[0].subTasks);

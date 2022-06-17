@@ -3,10 +3,12 @@ A todo application created with MERN
 
 ## Getting Started
 
-1. Clone this project
+1. Clone this project and navigate to the folder
 
-```bash
+```
 git clone https://github.com/abhndv/todo-react-node.git
+
+cd todo-react-node
 ```
 
 2. Jump into the api and web directories and Install dependencies

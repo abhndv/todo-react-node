@@ -12,16 +12,16 @@ router.get("/todos", async (req, res, next) => {
   try {
     const todos = await Todo.aggregate([
       {
+        $match: {
+          parentTodo: { $eq: null },
+        },
+      },
+      {
         $lookup: {
           from: "todos",
           localField: "_id",
           foreignField: "parentTodo",
           as: "subTaskCount",
-        },
-      },
-      {
-        $match: {
-          parentTodo: { $eq: null },
         },
       },
       { $addFields: { subTaskCount: { $size: "$subTaskCount" } } },
@@ -39,16 +39,16 @@ router.get("/todos/:id", async (req, res, next) => {
     // const todos = await Todo.findById(id);
     const todos = await Todo.aggregate([
       {
+        $match: {
+          _id: mongoose.Types.ObjectId(id),
+        },
+      },
+      {
         $lookup: {
           from: "todos",
           localField: "_id",
           foreignField: "parentTodo",
           as: "subTasks",
-        },
-      },
-      {
-        $match: {
-          _id: mongoose.Types.ObjectId(id),
         },
       },
       { $addFields: { subTaskCount: { $size: "$subTasks" } } },
@@ -122,6 +122,13 @@ router.delete("/todos/:id", async (req, res, next) => {
         todoIds.push(pTodo["_id"]);
         const todos = await Todo.aggregate([
           {
+            $match: {
+              _id: mongoose.Types.ObjectId(id),
+              // status: "InProgress",
+              // "subTasks.status": "InProgress",
+            },
+          },
+          {
             $graphLookup: {
               from: "todos",
               startWith: "$_id",
@@ -131,13 +138,6 @@ router.delete("/todos/:id", async (req, res, next) => {
             },
           },
           { $unwind: { path: "$subTasks" } },
-          {
-            $match: {
-              _id: mongoose.Types.ObjectId(id),
-              // status: "InProgress",
-              // "subTasks.status": "InProgress",
-            },
-          },
         ]);
         if (todos.length) {
           for (var i = 0; i < todos.length; i++) {

@@ -10,7 +10,6 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [todos, setTodos] = useState([]);
   const [parent, setParent] = useState(null);
-  const [current, setCurrent] = useState(null);
 
   useEffect(() => {
     if (parent && parent["_id"]) {

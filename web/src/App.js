@@ -38,7 +38,9 @@ function App() {
       .then((res) => {
         setLoading(false);
         setParent(res[0]);
-        setTodos(res[0].subTasks);
+        if (res[0]?.subTasks?.length && res[0].subTasks[0]["_id"]) {
+          setTodos(res[0].subTasks);
+        } else setTodos([]);
       })
       .catch((err) => {
         setLoading(false);
@@ -81,7 +83,6 @@ function App() {
         if (uTodo[index]) uTodo.splice(index, 1);
         setTodos(uTodo);
         toast.success("Deleted " + res.deletedCount + " todos.");
-        console.log(res);
       })
       .catch((err) => {
         toast.error(err.message);

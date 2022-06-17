@@ -36,7 +36,7 @@ router.get("/todos", async (req, res, next) => {
 router.get("/todos/:id", async (req, res, next) => {
   try {
     const id = req.params.id;
-    // const todos = await Todo.findById(id);
+
     const todos = await Todo.aggregate([
       {
         $match: {
@@ -51,9 +51,51 @@ router.get("/todos/:id", async (req, res, next) => {
           as: "subTasks",
         },
       },
-      { $addFields: { subTaskCount: { $size: "$subTasks" } } },
+      {
+        $unwind: {
+          path: "$subTasks",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $lookup: {
+          from: "todos",
+          localField: "subTasks._id",
+          foreignField: "parentTodo",
+          as: "subTasks.subTaskCount",
+        },
+      },
+      {
+        $addFields: {
+          "subTasks.subTaskCount": {
+            $size: "$subTasks.subTaskCount",
+          },
+        },
+      },
+      {
+        $group: {
+          _id: "$_id",
+          text: {
+            $first: "$text",
+          },
+          status: {
+            $first: "$status",
+          },
+          completionDate: {
+            $first: "$completionDate",
+          },
+          createdDate: {
+            $first: "$createdDate",
+          },
+          subTasks: {
+            $push: "$subTasks",
+          },
+        },
+      },
     ]);
-    res.json(todos);
+
+    if (todos.length) res.json(todos);
+    else next({ status: 404, message: "Invalid Task Id" });
   } catch (error) {
     next(error);
   }
@@ -66,12 +108,12 @@ router.post("/todos", async (req, res, next) => {
   const { text, status, completionDate, parentTodo } = req && req.body;
   try {
     if (!text) {
-      next({ message: "Parameter text is required!" });
+      next({ status: 400, message: "Parameter text is required!" });
     } else {
       var pTodo;
       if (parentTodo) {
         pTodo = await Todo.findById(parentTodo);
-        if (!pTodo) next({ message: "Invalid Parent Task" });
+        if (!pTodo) next({ status: 404, message: "Invalid Parent Task" });
       }
       const status = todoStatus[0];
       const newTodo = new Todo({
@@ -94,7 +136,7 @@ router.put("/todos/:id", async (req, res, next) => {
   const id = req.params.id;
   try {
     if (!(status && todoStatus.includes(status))) {
-      next("Invalid Task Status");
+      next({ status: 404, message: "Invalid Task Status" });
     } else {
       const todo = await Todo.findById(id);
       todo.status = status;
@@ -111,13 +153,17 @@ router.delete("/todos/:id", async (req, res, next) => {
   try {
     const id = req.params.id;
     const pTodo = await Todo.findById(id);
-    if (!pTodo) next({ message: "A todo with matching id didn't found" });
+    if (!pTodo)
+      next({ status: 404, message: "A todo with matching id didn't found" });
     else {
       var isValid = true,
         todoIds = [];
       if (pTodo.status == "InProgress") {
         isValid = false;
-        next({ message: "Cannot delete a task which is in Progress." });
+        next({
+          status: 405,
+          message: "Cannot delete a task which is in Progress.",
+        });
       } else {
         todoIds.push(pTodo["_id"]);
         const todos = await Todo.aggregate([
@@ -154,6 +200,7 @@ router.delete("/todos/:id", async (req, res, next) => {
           res.json(result);
         } else {
           next({
+            status: 405,
             message:
               "One or more subtasks are in InProgress state. You cannot delete parent tasks when child are in InProgress.",
           });
